@@ -60,18 +60,18 @@ module.exports.checkXML = (req, res, next) => {
             \nYour file ${file.originalname} is either malformed or not an XML file.  
             \nPlease try again.  Error Code:  ${validationResult.err.code}. \r\n Error Message:  ${validationResult.err.msg}`)
 
-            console.log(req.files)
+
+            // Delete submitted files
             for (const fileForDeletion of req.files) {
                 fs.unlink(fileForDeletion.path, (err) => {
                     if (err) throw err;
                     //console.log(fileForDeletion.path, "Was deleted")
                 })
             }
-
+            // redirect home with flash message
             return res.redirect('/');
         }
-        console.log("AFTER THE FILE")
-        //  redirect with a flash
+
 
     }
     next();
