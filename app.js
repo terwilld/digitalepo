@@ -9,7 +9,7 @@ const path = require('path')
 require('dotenv').config()
 const Routes = require('./routes/base.js')
 const { initUploadFolders } = require('./controllers/files.js')
-
+const morgan = require("morgan");
 app.engine('ejs', ejsMate)
 app.set('view engine', 'ejs')
 
@@ -30,6 +30,8 @@ app.use(methodOverride('_method'))
 
 initUploadFolders(path.join(process.cwd(), process.env.processingDirectory));
 
+
+app.use(morgan(':remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length]'));
 
 const sessionConfig = {
     // name: 'myfancycoookiename',
