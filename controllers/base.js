@@ -1,9 +1,10 @@
 const parser = require('fast-xml-parser');
-
+const fs = require('fs')
 
 module.exports.index = (req, res) => {
     // console.log('derp in the controller')
     // console.log(res.locals)
+
     res.render('base/index.ejs')
     // res.send('asdf in the controllers')
 }
@@ -27,8 +28,8 @@ module.exports.sanitizeInputs = (req, res, next) => {
 }
 
 module.exports.checkXML = (req, res, next) => {
-    console.log('in the check xml section')
-    console.log(req.files)
+    //console.log('in the check xml section')
+    // console.log(req.files)
 
 
     const xmlString = `<?xml version="1.0" encoding="UTF-8" ?>
@@ -41,16 +42,52 @@ module.exports.checkXML = (req, res, next) => {
     </tagname>
 </body>`;
 
+    // console.log(parser)
+    // console.log(parser.XMLValidator)
+    for (const file of req.files) {
+        console.log(file)
+        const data = fs.readFileSync(file.path, 'utf8');
+        const validationResult = parser.XMLValidator.validate(data);
 
-    const parser = require('fast-xml-parser');
-    console.log(parser)
-    console.log(parser.XMLValidator)
-    const validationResult = parser.XMLValidator.validate(xmlString);
-    console.log(validationResult)
+
+        if (validationResult !== true) {
+            console.log(validationResult, "Validation result not true")
+
+            //clean All files on this request.
+
+
+            req.flash('error', `Malformed XML file.  
+            \nYour file ${file.originalname} is either malformed or not an XML file.  
+            \nPlease try again.  Error Code:  ${validationResult.err.code}. \r\n Error Message:  ${validationResult.err.msg}`)
+
+            console.log(req.files)
+            for (const fileForDeletion of req.files) {
+                fs.unlink(fileForDeletion.path, (err) => {
+                    if (err) throw err;
+                    //console.log(fileForDeletion.path, "Was deleted")
+                })
+            }
+
+            return res.redirect('/');
+        }
+        console.log("AFTER THE FILE")
+        //  redirect with a flash
+
+    }
     next();
+    // const validationResult = parser.XMLValidator.validate(xmlString);
+    // console.log(validationResult)
+    // next();
 }
 
 
+
+// import { unlink } from 'node:fs';
+// // Assuming that 'path/file.txt' is a regular file.
+// unlink('path/file.txt', (err) => {
+//     if (err) throw err;
+//     console.log('path/file.txt was deleted');
+// });
 
 
 

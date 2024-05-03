@@ -7,9 +7,7 @@ const path = require('path')
 
 
 module.exports.initUploadFolders = (baseFolder) => {
-    console.log('fuasdf inside init upload folders')
-    console.log(baseFolder)
-    console.log(process.cwd())
+
     if (!fs.existsSync(baseFolder)) {
         fs.mkdirSync(baseFolder);
     }

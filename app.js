@@ -17,20 +17,9 @@ app.set('view engine', 'ejs')
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(methodOverride('_method'))
 
-//console.log("logging('process.env')")
-// console.log(process.env)
-
-//fs.readFile(path.resolve(__dirname, 'settings.json'), 'UTF-8', callback);
-
-////console.log('resolving path in app.js')
-//console.log(path.resolve(__dirname))
-
-//console.log(process.env.processingDirectory)
 
 
 initUploadFolders(path.join(process.cwd(), process.env.processingDirectory));
-
-
 app.use(morgan(':remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length]'));
 
 const sessionConfig = {
@@ -59,12 +48,7 @@ app.use((req, res, next) => {
 })
 
 
-
-
-
-
 app.use('/', Routes)
-
 
 app.listen(3000, () => {
     console.log('app is running on 3000')

@@ -12,7 +12,7 @@ const inputFileOutputfile = require('../js/index.js')
 const uploadDir = path.join(process.cwd(), process.env.processingDirectory, 'uploads')
 const processedDir = path.join(process.cwd(), process.env.processingDirectory, 'processed')
 const upload = multer({ dest: uploadDir })
-console.log('upload destination set as :  ', uploadDir)
+
 
 
 
