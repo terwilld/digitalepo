@@ -30,56 +30,61 @@ module.exports.sanitizeInputs = (req, res, next) => {
 module.exports.checkXML = (req, res, next) => {
     //console.log('in the check xml section')
     // console.log(req.files)
-
-
-    const xmlString = `<?xml version="1.0" encoding="UTF-8" ?>
-<body>
-    <tagname>
-        test1
-    </tag.name>   <--- error here
-    <tagname>
-        test2
-    </tagname>
-</body>`;
-
     // console.log(parser)
     // console.log(parser.XMLValidator)
-    for (const file of req.files) {
-        console.log(file)
+    if (req.file) {
+        console.log('this is a single file')
+        const file = req.file
         const data = fs.readFileSync(file.path, 'utf8');
         const validationResult = parser.XMLValidator.validate(data);
-
-
         if (validationResult !== true) {
-            console.log(validationResult, "Validation result not true")
+            //console.log(validationResult, "Validation result not true")
 
-            //clean All files on this request.
-
-
+            //clean file on this request.
             req.flash('error', `Malformed XML file.  
-            \nYour file ${file.originalname} is either malformed or not an XML file.  
-            \nPlease try again.  Error Code:  ${validationResult.err.code}. \r\n Error Message:  ${validationResult.err.msg}`)
-
-
+            Your file ${file.originalname} is either malformed or not an XML file.  
+            Please try again.  Error Code:  ${validationResult.err.code}. \r\n Error Message:  ${validationResult.err.msg}`)
             // Delete submitted files
-            for (const fileForDeletion of req.files) {
-                fs.unlink(fileForDeletion.path, (err) => {
-                    if (err) throw err;
-                    //console.log(fileForDeletion.path, "Was deleted")
-                })
-            }
+            fs.unlink(file.path, (err) => {
+                if (err) throw err;
+            })
             // redirect home with flash message
             return res.redirect('/');
         }
+        console.log("validation is fine")
+        next();
+    } else {
+        //This else block should never run. It is for attempted multi uploads
+        //  This was removed.
+        for (const file of req.files) {
+            console.log(file)
+            const data = fs.readFileSync(file.path, 'utf8');
+            const validationResult = parser.XMLValidator.validate(data);
+            if (validationResult !== true) {
+                console.log(validationResult, "Validation result not true")
 
+                //clean All files on this request.
 
+                req.flash('error', `Malformed XML file.  
+            \nYour file ${file.originalname} is either malformed or not an XML file.  
+            \nPlease try again.  Error Code:  ${validationResult.err.code}. \r\n Error Message:  ${validationResult.err.msg}`)
+                // Delete submitted files
+                for (const fileForDeletion of req.files) {
+                    fs.unlink(fileForDeletion.path, (err) => {
+                        if (err) throw err;
+                        //console.log(fileForDeletion.path, "Was deleted")
+                    })
+                }
+                // redirect home with flash message
+                return res.redirect('/');
+            }
+        }
+        next();
     }
-    next();
     // const validationResult = parser.XMLValidator.validate(xmlString);
     // console.log(validationResult)
     // next();
 }
-
 
 
 // import { unlink } from 'node:fs';

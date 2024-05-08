@@ -351,17 +351,11 @@ function boilierPlateRecursion(obj, options, depth = 1) {
 
 
 function inputFileOutputfile(input, output, options) {
-
     const xmlFile = fs.readFileSync(input, 'utf8');
-
     const my_json = convert.xml2js(xmlFile, { compact: true, spaces: 1 });
-
     var my_json2 = myloopjson(my_json, options)
-
     var my_xml = convert.js2xml(my_json2, { compact: true, ignoreComment: true, spaces: 1 })
-
     fs.writeFileSync(output, my_xml)
-
 }
 
 
@@ -390,6 +384,10 @@ function inputFileOutputfile(input, output, options) {
 // console.log('derp')
 // var my_xml = convert.js2xml(my_json2, { compact: true, ignoreComment: true, spaces: 1 })
 // // fs.writeFileSync('output.tcx', my_xml)
+
+
+//  Great multi threading tutorial
+//https://betterprogramming.pub/how-to-use-promises-and-worker-threads-in-nodes-to-parallelize-cpu-usage-78301b4ded33
 
 
 module.exports = inputFileOutputfile;

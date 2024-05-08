@@ -1,0 +1,27 @@
+#
+
+#   Add file processing in stream.  Do not write to disk.  No need to read, process, write and send back.
+
+
+#   Better Logging
+
+#   Something other than just downloading to browser
+
+#   workers for processing
+
+
+
+##   Lessons.
+
+    Global variables are very not good.  This was a nightmarae of scope declaration
+    
+    parsing of the json is the most expensive part.
+
+    There can only be one next =D
+
+##  Cool things:
+     File Processing
+     Monster function is pretty nifty recursive searching and reconstruction
+     Error checking in the parse
+     multi threading
+
