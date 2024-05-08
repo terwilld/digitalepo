@@ -1,7 +1,7 @@
 const fs = require('fs');
 const convert = require('xml-js');
 const { performance } = require('perf_hooks');
-
+const path = require('path')
 
 Date.prototype.addHours = function (h) {
     this.setHours(this.getHours() + h);
@@ -28,7 +28,7 @@ Date.prototype.addHours = function (h) {
 //   Add Scale Power
 //speedIncrease = 25
 
-//  MOTHER FUCKING CIRCULAR REFERENCES CREATED BY ACCIDENTAL GLOBAL VARIABLE CREATION
+//  CIRCULAR REFERENCES CREATED BY ACCIDENTAL GLOBAL VARIABLE CREATION
 
 //  Unused arg depth is used for recusion debugging.  No effect
 //  Might have to adjust script for multiple laps
@@ -192,10 +192,54 @@ function addHoursFunction(obj, options = {}, depth = 1) {
 }
 
 function increaseSpeed(obj, speedIncrease = 0) {
+
+    //console.log(obj.TrainingCenterDatabase.Activities.Activity)
+
+    //  Two options.  obj.TrainingCenterDatabase.Activities.Activity.Lap is an object or array of objects
+    //  In either case the form of these objects themselves has a field called Track, with an array of track points.
+
+
+    //  In both cases we need the global start time of the activity.
+    //  First - handle single lap activites
+
+    const startTime = new Date(obj.TrainingCenterDatabase.Activities.Activity.Id._text)
+    //const startTimeEpoch = Date.parse(startTime)
+
+    //console.log(obj.TrainingCenterDatabase.Activities.Activity.Lap)
+    if (!(Array.isArray(obj.TrainingCenterDatabase.Activities.Activity.Lap))) {
+        //Branch for 1 lap
+        //console.log('This is not an array')
+        //  The function compress lap must take a lap object, a global start time and a speed increase %.
+        //  This returns the adjusted object.
+        const adjustedObject = adjustLap(obj.TrainingCenterDatabase.Activities.Activity.Lap, startTime, speedIncrease)
+        obj.TrainingCenterDatabase.Activities.Activity.Lap = adjustedObject
+        return obj
+    } else {
+        //Branch for multiple laps
+        //  This must iterate through all the lap objects adjusting each one at a time, adding them to an array.
+        //console.log('this is an array')
+        //console.log(obj.TrainingCenterDatabase.Activities.Activity.Lap)
+        newLap = []
+        for (const element of obj.TrainingCenterDatabase.Activities.Activity.Lap) {
+            //console.log(element)
+            const adjustedObject = adjustLap(element, startTime, speedIncrease)
+            newLap.push(adjustedObject)
+        }
+        obj.TrainingCenterDatabase.Activities.Activity.Lap = newLap
+        //console.log('Just one at the end')
+        //console.log(obj.TrainingCenterDatabase.Activities.Activity.Lap[1])
+        //console.log(obj.TrainingCenterDatabase.Activities)
+        return obj
+    }
+
+
+
+    //console.log(startTime, startTimeEpoch)
+    return obj
     const trackPoints = obj.TrainingCenterDatabase.Activities.Activity.Lap.Track.Trackpoint
     newTrackpoints = []
-    const startTime = new Date(trackPoints[0].Time._text)
-    const startTimeEpoch = Date.parse(startTime)
+    //const startTime = new Date(trackPoints[0].Time._text)
+    //const startTimeEpoch = Date.parse(startTime)
 
     for (const element of trackPoints) {
         //console.log(element);
@@ -221,6 +265,56 @@ function increaseSpeed(obj, speedIncrease = 0) {
     obj.TrainingCenterDatabase.Activities.Activity.Lap.Track.Trackpoint = newerTrackpoints
     return obj
 }
+
+function adjustLap(lap, startTime, speedIncrease) {
+    //console.log(lap)
+    //console.log(startTime)
+    //console.log(speedIncrease)
+    const trackPoints = lap.Track.Trackpoint
+    const newTrackpoints = []
+    const startTimeEpoch = Date.parse(startTime)
+    //  This takes a single trackpoint.  calculates the difference from start to this track point, and adjustes.  Conversion to and from date
+    //  There might be a better way to do this without converting to and from epoch.
+    //  Data is rounded to seconds.
+    for (const element of trackPoints) {
+        //console.log(element)
+        //This is confusing but to avoid circular references  There might be a better way.
+        let newElement = JSON.parse(JSON.stringify(element))
+
+        const currentTime = new Date(element.Time._text)
+        const currentTimeEpoch = Date.parse(currentTime)
+
+        const epochDifference = currentTimeEpoch - startTimeEpoch
+        const newTimeEpoch = startTimeEpoch + (epochDifference / (1 + (Math.floor(speedIncrease) * .01)))
+        const newTime = new Date(newTimeEpoch);
+        newElement.Time._text = newTime.toISOString().split('.')[0] + "Z"
+        newTrackpoints.push(newElement)
+    }
+
+    //  This takes the newly calculated track points - and REMOVES ANY DUPLICATES AFTER ROUNDING OF TIME
+    //  Neccessary for parsing else there will be multiple points with identical times because I have compressed
+    //  This could probably be done in place, rather than with multiple temporary arrays.
+    newerTrackpoints = []
+    for (let i = 0; i < newTrackpoints.length - 1; i++) {
+        const obj = newTrackpoints[i];
+        const nextObj = newTrackpoints[i + 1]
+        if ((obj.Time._text == nextObj.Time._text) == false) {
+            newerTrackpoints.push(obj)
+        }
+    }
+    lap.Track.Trackpoint = newerTrackpoints
+    //  Also adjust the lap start time.  Just incase.  This should have no effect on a single lap activity.
+    //  Take the _attribute Start Time and compress it towards the input global start time according to the speed increase.
+    const lapStartTime = new Date(lap._attributes.StartTime)
+    const lapStartTimeEpoch = Date.parse(lapStartTime)
+    const epochDifference = lapStartTimeEpoch - startTimeEpoch
+    const newLapTimeEpoch = startTimeEpoch + (epochDifference / (1 + (Math.floor(speedIncrease) * .01)))
+    const newLapTime = new Date(newLapTimeEpoch);
+    lap._attributes.StartTime = newLapTime.toISOString().split('.')[0] + "Z"
+    return lap
+}
+
+
 
 
 //  Core logic of the recursive function.
@@ -272,7 +366,12 @@ function inputFileOutputfile(input, output, options) {
 
 
 
-
+//  Testing for adding lap support
+//  
+//console.log(path.join(process.cwd(), 'fileProcessingNew', 'testing', '5boro.tcx'))
+//console.log(path.join(process.cwd(), 'fileProcessingNew', 'testing', 'ForTesting.tcx'))
+//inputFileOutputfile(path.join(process.cwd(), 'fileProcessingNew', 'testing', '5boro.tcx'), 'output.tcx', { speedIncrease: 50, addHours: 30 })
+//inputFileOutputfile(path.join(process.cwd(), 'fileProcessingNew', 'testing', 'ForTesting.tcx'), 'output.tcx', { speedIncrease: 50 })
 
 
 // const xmlFile = fs.readFileSync('ForTesting.tcx', 'utf8');

@@ -40,13 +40,13 @@ router.post('/', upload.array('gpxfile', 12), baseControllers.sanitizeInputs, ba
         // res.download('fileProcessing/processed/' + newName)
 
     }
-    console.log(resultFileNames)
+    //console.log(resultFileNames)
     var zip = new AdmZip();
     for (const file of resultFileNames) {
         zip.addLocalFile(file);
     }
     const randomNumber = Math.floor(Math.random() * 1000000)
-    console.log(randomNumber, "Random Number")
+    //console.log(randomNumber, "Random Number")
     const zipFileName = path.join(processedDir, 'Adjusted_' + randomNumber + '.zip')
     zip.writeZip(zipFileName);
     res.download(zipFileName)
