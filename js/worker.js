@@ -1,3 +1,4 @@
+const { workerData, parentPort } = require('worker_threads');
 const fs = require('fs');
 const convert = require('xml-js');
 const { performance } = require('perf_hooks');
@@ -8,45 +9,52 @@ Date.prototype.addHours = function (h) {
     return this;
 }
 
-//  Child Functions recursively deconstruct the input json
-//  Make changes and return the reconstructed json
-//  Each key has a value of object {arr or object} or a string
-//  If the value is a string, it is returned post edits.
-//  If the value is an object, the same function is called
-//  The function requires a json which has been created by xml2js.  Ideally tcx / gpx data
-//  
-//  Optional Parameters are 
-//          addHours: 30,          This should be an integer number positive or negative  It will shift data timestamps
-//          increasePower: 30,     This should be an integer number positive or negative  It will shift power data if present in <Watts>{}</Watts>
-//          addHeartRate: 100      This should be an integer number positive or negative  It will shift heart rate data if present in HR
-
-//   Does not handle nested arrays currently
-//   Searches for specific format.  This should be adjusted {can it}?
-//   Monster function was broken into parts.  Json construction and deconstruction happens multiple times.
-//   This is not ideal but will make debugging / editing easier  Otherwise each key value will have to be searched for each possible input paramter
-//   Add Scale HR
-//   Add Scale Power
-//speedIncrease = 25
-
-//  CIRCULAR REFERENCES CREATED BY ACCIDENTAL GLOBAL VARIABLE CREATION
-
-//  Unused arg depth is used for recusion debugging.  No effect
-//  Might have to adjust script for multiple laps
 
 
 
+
+
+
+function inputFileOutputfile(input, output, options) {
+    // parentPort.postMessage("I am inside the big function")
+    // parentPort.postMessage(`input file name: ${input}`)
+    // parentPort.postMessage(`output file name: ${output}`)
+    // parentPort.postMessage(JSON.stringify({ foo: 'bar', lol: 'sadf' }))
+    // parentPort.postMessage(JSON.stringify(options))
+    const xmlFile = fs.readFileSync(input, 'utf8');
+    const my_json = convert.xml2js(xmlFile, { compact: true, spaces: 1 });
+    var my_json2 = myloopjson(my_json, options)
+    var my_xml = convert.js2xml(my_json2, { compact: true, ignoreComment: true, spaces: 1 })
+    fs.writeFileSync(output, my_xml)
+}
+
+
+
+let counter = 0;
+// parentPort.postMessage('This is a message from the child thread')
+// parentPort.postMessage(workerData)
+
+// for (let i = 0; i < 500_000_000; i++) {
+//     if (counter % 100_000_000 == 0) {
+//         //parentPort.postMessage(counter);
+//     }
+//     counter++;
+// }
+
+inputFileOutputfile(workerData.file, workerData.outputFileName, workerData.params)
 
 function myloopjson(obj, options = { speedIncrease: 0, addHours: 0, increasePower: 0, increaseHeartRate: 0 }, depth = 1) {
     var result = {};
     // console.log(options)
     var { addHours, increasePower, increaseHeartRate, speedIncrease } = options;
 
-
-    console.log("Executing big function with parameters:")
-    console.log("Add Hours: ", addHours)
-    console.log("increasePower: ", increasePower)
-    console.log("increaseHeartRate: ", increaseHeartRate)
-    console.log("speedIncrease: ", speedIncrease)
+    //  All Log messages now need to be sent to parentPort.postMessage.
+    //  data sent must be iterable - i.e. cannot be of the below form.
+    // console.log("Executing big function with parameters:")
+    // console.log("Add Hours: ", addHours)
+    // console.log("increasePower: ", increasePower)
+    // console.log("increaseHeartRate: ", increaseHeartRate)
+    // console.log("speedIncrease: ", speedIncrease)
 
     //console.log("Increase Heartrate: ", increaseHeartRate)
 
@@ -80,6 +88,42 @@ function myloopjson(obj, options = { speedIncrease: 0, addHours: 0, increasePowe
         obj = tmp;
     }
 
+
+    if ((speedIncrease) && (Math.floor(speedIncrease))) {
+
+        speedIncrease = Math.floor(speedIncrease)
+        var tmp = increaseSpeed(obj, speedIncrease)
+        obj = tmp
+    }
+    return obj
+}
+
+
+function myloopjson(obj, options = { speedIncrease: 0, addHours: 0, increasePower: 0, increaseHeartRate: 0 }, depth = 1) {
+    var result = {};
+    // console.log(options)
+    var { addHours, increasePower, increaseHeartRate, speedIncrease } = options;
+
+    // var startTime = performance.now()
+    if ((increaseHeartRate) && (Math.floor(increaseHeartRate))) {
+        increaseHeartRate = Math.floor(increaseHeartRate)     //Round it and type conversion
+        var tmp = increaseHeartRateFunction(obj, { increaseHeartRate })
+        obj = tmp
+    }
+    // var endTime = performance.now()
+    // console.log(`Editing Heart rate data took: ${endTime - startTime} milliseconds`)
+
+    if ((increasePower) && (Math.floor(increasePower))); {
+        increasePower = Math.floor(increasePower)
+        var tmp = increasePowerFunction(obj, { increasePower })
+        obj = tmp
+    }
+
+    if ((addHours) && (Math.floor(addHours))) {
+        addHours = Math.floor(addHours)
+        var tmp = addHoursFunction(obj, { addHours })
+        obj = tmp;
+    }
 
     if ((speedIncrease) && (Math.floor(speedIncrease))) {
 
@@ -313,82 +357,3 @@ function adjustLap(lap, startTime, speedIncrease) {
     lap._attributes.StartTime = newLapTime.toISOString().split('.')[0] + "Z"
     return lap
 }
-
-
-
-
-//  Core logic of the recursive function.
-//  If value of a key is an object it is either an array or an object.
-//      If it is an array - each element of the array is assumed to be an object and has the function applied to it.
-//      if it is an object - the object has the function applied to it.
-//      If the vlue of the key is a string - it is returned
-//      This is fucky
-//      This is a dream.  Unused because I need to modify code to have variable search critera.
-//      This seems very difficult.
-
-function boilierPlateRecursion(obj, options, depth = 1) {
-    var result = {}
-    for (let key in obj) {
-        if (typeof (obj[key]) === 'object') {
-            if (Array.isArray(obj[key])) {
-                var arrResult = []
-                for (let i = 0; i < obj[key].length; i++) {
-                    arrResult.push(boilierPlateRecursion(obj[key][i], options, depth + 1))
-                }
-                result[key] = arrResult
-            } else {
-                var tmpResult = boilierPlateRecursion(obj[key], options, depth + 1)
-                result[key] = tmpResult
-            }
-        }
-        else {
-            result[key] = obj[key]
-        }
-    }
-    return result
-}
-
-
-
-function inputFileOutputfile(input, output, options) {
-    const xmlFile = fs.readFileSync(input, 'utf8');
-    const my_json = convert.xml2js(xmlFile, { compact: true, spaces: 1 });
-    var my_json2 = myloopjson(my_json, options)
-    var my_xml = convert.js2xml(my_json2, { compact: true, ignoreComment: true, spaces: 1 })
-    fs.writeFileSync(output, my_xml)
-}
-
-
-
-//  Testing for adding lap support
-//  
-//console.log(path.join(process.cwd(), 'fileProcessingNew', 'testing', '5boro.tcx'))
-//console.log(path.join(process.cwd(), 'fileProcessingNew', 'testing', 'ForTesting.tcx'))
-//inputFileOutputfile(path.join(process.cwd(), 'fileProcessingNew', 'testing', '5boro.tcx'), 'output.tcx', { speedIncrease: 50, addHours: 30 })
-//inputFileOutputfile(path.join(process.cwd(), 'fileProcessingNew', 'testing', 'ForTesting.tcx'), 'output.tcx', { speedIncrease: 50 })
-
-
-// const xmlFile = fs.readFileSync('ForTesting.tcx', 'utf8');
-// var my_json = convert.xml2js(xmlFile, { compact: true, spaces: 1 });
-// //var my_json2 = myloopjson(my_json, { addHours: 30, increasePower: 30, increaseHeartRate: 100, speedIncrease: 25 })
-
-// roughObjSize = JSON.stringify(my_json).length;
-// console.log("roughObj Size my_json", roughObjSize)
-// var my_json2 = myloopjson(my_json, { addHours: 30, increasePower: 30, speedIncrease: 25, increaseHeartRate: '33.3' })
-
-// // console.log(my_json.TrainingCenterDatabase.Activities.Activity.Lap)
-// console.log(my_json2.TrainingCenterDatabase.Activities.Activity.Lap)
-// roughObjSize = JSON.stringify(my_json2).length;
-// console.log("roughObj Size my_json2", roughObjSize)
-
-// console.log('derp')
-// var my_xml = convert.js2xml(my_json2, { compact: true, ignoreComment: true, spaces: 1 })
-// // fs.writeFileSync('output.tcx', my_xml)
-
-
-//  Great multi threading tutorial
-//https://betterprogramming.pub/how-to-use-promises-and-worker-threads-in-nodes-to-parallelize-cpu-usage-78301b4ded33
-
-
-
-module.exports = inputFileOutputfile;

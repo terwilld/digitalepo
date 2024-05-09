@@ -7,7 +7,7 @@ const path = require('path')
 const AdmZip = require("adm-zip");
 const fs = require('fs')
 const inputFileOutputfile = require('../js/index.js')
-
+const { Worker, isMainThread, workerData } = require('worker_threads');
 // const upload = multer({ dest: 'fileProcessing/uploads/' })
 
 
@@ -25,18 +25,32 @@ router.post('/',
     upload.single('gpxfile', 12),
     baseControllers.sanitizeInputs,
     baseControllers.checkXML,
-    (req, res) => {
-
-        // console.log('inside the post about to log file and req.body')
-        // console.log(req.file)
-        // console.log(req.body)
+    async (req, res) => {
         const { speedIncrease, increasePower, increaseHeartRate, addHours } = res.locals
-        // console.log("Post req body parsing", speedIncrease, increasePower, increaseHeartRate, addHours)
         const file = req.file
         var newName = file.originalname.split('.')[0] + '_adjusted' + file.filename.substring(0, 10) + '.' + file.originalname.split('.')[1]
         const outputFileName = path.join(processedDir, newName)
-        inputFileOutputfile(file.path, outputFileName, { addHours, increasePower, increaseHeartRate, speedIncrease })
-        res.download(outputFileName)
+        const worker = new Worker("./js/worker.js",
+            {
+                workerData:
+                {
+                    file: file.path, outputFileName,
+                    params: { speedIncrease, increasePower, increaseHeartRate, addHours }
+                }
+            });
+        worker.on("message", msg => { console.log(`Worker message received:`, msg) });
+        worker.on("error", err => {
+            req.flash('error', `There was an error handling your request.  ${err}`)
+            console.error(err)
+            res.redirect('/')
+        });
+        worker.on("exit", (code, result, workerData) => {
+            res.download(outputFileName)
+        });
+
+
+        // res.send('test')
+        //res.download(outputFileName)
     })
 
 

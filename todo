@@ -9,11 +9,24 @@
 
 #   workers for processing
 
+#   Progress status for as file is being analyzed and processed
+
+#   Separation of data and logic.  Files are STILL being written to the file system
+#   At a minimum, log files to AWS
+#   
+
+#   There really is no reason to log files to the file system.  Can this all be done in memory, passing variables from one to another.
+#   This currently will consume main thread read write.
+
+#   How can a database be added for this.  There is no real logging required.
+
+
+
 
 
 ##   Lessons.
 
-    Global variables are very not good.  This was a nightmarae of scope declaration
+    Global variables are very not good.  This was a nightmarae of scope declaration accidentally creating millions of circular links in my objects.
     
     parsing of the json is the most expensive part.
 
