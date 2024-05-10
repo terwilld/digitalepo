@@ -21,6 +21,7 @@ app.use(methodOverride('_method'))
 
 initUploadFolders(path.join(process.cwd(), process.env.processingDirectory));
 app.use(morgan(':remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length]'));
+app.use(express.static(path.join(__dirname, 'public')))
 
 const sessionConfig = {
     // name: 'myfancycoookiename',

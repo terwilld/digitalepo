@@ -21,6 +21,7 @@ const upload = multer({ dest: uploadDir })
 router.get('/', baseControllers.index)
 
 
+
 router.post('/',
     upload.single('gpxfile', 12),
     baseControllers.sanitizeInputs,
